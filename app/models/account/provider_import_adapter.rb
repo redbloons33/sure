@@ -161,9 +161,9 @@ class Account::ProviderImportAdapter
       elsif detected_label == "Contribution"
         auto_kind = "investment_contribution"
         auto_category = account.family.investment_contributions_category
-      elsif account.accountable_type == "Loan" && amount.negative?
+      elsif account.accountable_type == "Loan" && amount.negative? && looks_like_liability_payment?(name)
         auto_kind = "loan_payment"
-      elsif account.accountable_type == "CreditCard" && amount.negative?
+      elsif account.accountable_type == "CreditCard" && amount.negative? && looks_like_liability_payment?(name)
         auto_kind = "cc_payment"
       end
 
@@ -897,6 +897,17 @@ class Account::ProviderImportAdapter
     else
       nil # Let user categorize manually - default to nil for safety
     end
+  end
+
+  # Narrow signal for auto-tagging an inflow on a liability account as a payment.
+  # Without this, refunds, statement credits, and rewards redemptions (all negative
+  # amounts on a CreditCard/Loan) get tagged as cc_payment/loan_payment and excluded
+  # from budget analytics. When auto_match_transfers! later pairs a real payment
+  # with its cash-account outflow, it overrides this anyway — so this auto_kind
+  # only "sticks" on orphan entries, which is exactly where the false positives hurt.
+  def looks_like_liability_payment?(name)
+    return false if name.blank?
+    name.match?(/\b(payment|autopay)\b/i)
   end
 
   # Determines why an entry should be skipped during sync.

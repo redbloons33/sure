@@ -49,9 +49,12 @@ class Provider::Plaid
       country_codes: country_codes,
       language: "en",
       webhook: webhooks_url,
-      redirect_uri: redirect_url,
       transactions: { days_requested: MAX_HISTORY_DAYS }
     }
+
+    # Plaid production rejects non-HTTPS redirect_uri. Omitting it is valid —
+    # Link falls back to the in-browser/postMessage OAuth flow in that case.
+    request_params[:redirect_uri] = redirect_url if redirect_url.present? && redirect_url.start_with?("https://")
 
     if access_token.present?
       request_params[:access_token] = access_token
