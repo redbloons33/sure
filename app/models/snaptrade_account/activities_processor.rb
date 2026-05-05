@@ -244,12 +244,16 @@ class SnaptradeAccount::ActivitiesProcessor
       @transactions_count += 1 if result
     end
 
+    # Sure's signage convention: amount > 0 = outflow (expense), amount < 0 = inflow (income).
+    # SnapTrade reports inflows and outflows as positive magnitudes per type, so we re-sign
+    # them to match Plaid/Sure. Without this, dividends, interest, contributions, etc. get
+    # classified as expenses on the income statement.
     def normalize_cash_amount(amount, activity_type)
       case activity_type
       when "WITHDRAWAL", "TRANSFER_OUT", "FEE", "TAX"
-        -amount.abs  # These should be negative (money out)
+        amount.abs    # outflow
       when "CONTRIBUTION", "TRANSFER_IN", "DIVIDEND", "DIV", "INTEREST", "CASH"
-        amount.abs   # These should be positive (money in)
+        -amount.abs   # inflow
       else
         amount
       end
